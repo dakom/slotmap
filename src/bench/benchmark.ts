@@ -1,4 +1,4 @@
-import Benchmark from "benchmark";
+/*import Benchmark from "benchmark";
 import {create_slotmap, MAX_ID} from "../lib/lib";
 
 const suite_1= new Benchmark.Suite;
@@ -156,3 +156,4 @@ suite_3b
 
 })
 .run();
+*/

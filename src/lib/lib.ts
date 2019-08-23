@@ -1,4 +1,4 @@
-export {create_slotmap} from "./core/slotmap";
+export * from "./core/slotmap";
 export * from "./core/errors";
 export {
     Key, 

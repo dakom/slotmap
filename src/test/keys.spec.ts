@@ -6,7 +6,7 @@ const LABEL = (desc: string): string => `[keys] ${desc}`;
 
 test(LABEL("create"), () => {
 
-    const keys = init_keys(O.none);
+    const keys = init_keys();
     let key = keys.create();
 
     let key_id = extract_key_id(key);
@@ -35,7 +35,7 @@ test(LABEL("create"), () => {
     expect(0).toBe(key_version);
 });
 test(LABEL("remove"), () => {
-    const keys = init_keys(O.none);
+    const keys = init_keys();
 
     const key_0 = keys.create();
     const key_1 = keys.create();
@@ -43,13 +43,13 @@ test(LABEL("remove"), () => {
     keys.remove(key_0);
     keys.remove(key_2);
 
-    const alive_ids = keys.list_alive().map(extract_key_id);
+    const alive_ids = Uint32Array.from(keys).map(extract_key_id);
 
     expect(Uint32Array.from([1])).toEqual(alive_ids);
 });
 
 test(LABEL("add, remove, add"), () => {
-    const keys = init_keys(O.none);
+    const keys = init_keys();
 
     const key_0 = keys.create();
     const key_1 = keys.create();
@@ -61,7 +61,7 @@ test(LABEL("add, remove, add"), () => {
     keys.create();
     keys.create();
 
-    const alive_keys = keys.list_alive()
+    const alive_keys = Uint32Array.from(keys);
     const alive_ids = alive_keys.map(extract_key_id);
     const alive_versions = alive_keys.map(extract_key_version);
 
@@ -74,7 +74,7 @@ test(LABEL("add, remove, add"), () => {
 
 //This is correct for now... should be lower though! 
 test(LABEL("version spread"), () => {
-    const keys = init_keys(O.none);
+    const keys = init_keys();
 
     const tmp_keys = new Array(10).fill(null).map(keys.create);
     const list = keys.list_all();
@@ -88,7 +88,7 @@ test(LABEL("version spread"), () => {
 
     keys.create();
 
-    const alive_keys = keys.list_alive()
+    const alive_keys = Uint32Array.from(keys);
     const alive_ids = alive_keys.map(extract_key_id);
     const alive_versions = alive_keys.map(extract_key_version);
 
@@ -96,7 +96,7 @@ test(LABEL("version spread"), () => {
 });
 
 test(LABEL("version wrap"), () => {
-    const keys = init_keys(O.none);
+    const keys = init_keys();
 
     const tmp_keys = new Array(10).fill(null).map(keys.create);
     const list = keys.list_all();
@@ -112,7 +112,7 @@ test(LABEL("version wrap"), () => {
 
     keys.create();
 
-    const alive_keys = keys.list_alive();
+    const alive_keys = Uint32Array.from(keys);
 
     //console.log("len:", keys.list_all().length, "alive:", alive_keys.length);
 

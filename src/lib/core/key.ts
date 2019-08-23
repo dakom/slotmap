@@ -65,12 +65,12 @@ const forge = ({ id, version }: { id: number; version: number }): Key =>
 /**
  * This is not exported to the library, rather it is called by `world`
  */
-export const init_keys = (initial_capacity:Option<number>) => {
+export const init_keys = (initial_capacity?:number) => {
   //pointer to the last destroyed key
   let destroyed: Option<KeyId> = O.none;
 
   //when the cursor hits this, realloc
-  let next_capacity_target: number = O.fold(() => 0, (x:number) => x) (initial_capacity);
+  let next_capacity_target: number = initial_capacity ? initial_capacity : 0; 
   //next spot available for appending
   let append_cursor: number = 0;
 
@@ -89,6 +89,7 @@ export const init_keys = (initial_capacity:Option<number>) => {
       (key: Key, index: number) => extract_key_id(key) === index
     );
 
+  
   const create_and_alloc = (): [Key, number] =>
     O.fold(
       () => {
@@ -205,10 +206,10 @@ export const init_keys = (initial_capacity:Option<number>) => {
    * The exports
    */
   return {
+    [Symbol.iterator]: () => list_alive()[Symbol.iterator](),
     create,
     create_and_alloc,
     list_all,
-    list_alive,
     is_alive,
     remove,
     destroyed_to_string,
