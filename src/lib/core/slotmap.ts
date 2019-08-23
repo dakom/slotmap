@@ -24,9 +24,10 @@ export interface SlotMap<V> {
     //Array of key/value pairs
     entries: () => Readonly<Array<[Key,V]>>;
 }
-export function create_slotmap<V>():SlotMap<V> {
-    const lookup = init_lookup<V>();
-    const keys = init_keys();
+export function create_slotmap<V>(initial_capacity?: number):SlotMap<V> {
+    const _initial_capacity = initial_capacity ? O.some(initial_capacity) : O.none;
+    const lookup = init_lookup<V>(_initial_capacity);
+    const keys = init_keys(_initial_capacity);
 
     const insert = (value:V):Key => {
         const [key, alloc_amount] = keys.create_and_alloc();
@@ -56,7 +57,7 @@ export function create_slotmap<V>():SlotMap<V> {
         insert,
         remove,
         get,
-        values: () => lookup.values,
+        values: lookup.values,
         keys: () => Array.from(keys.list_alive()),
         entries: () => 
             Array.from(keys.list_alive())

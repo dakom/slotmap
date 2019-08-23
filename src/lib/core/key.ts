@@ -65,17 +65,17 @@ const forge = ({ id, version }: { id: number; version: number }): Key =>
 /**
  * This is not exported to the library, rather it is called by `world`
  */
-export const init_keys = () => {
+export const init_keys = (initial_capacity:Option<number>) => {
   //pointer to the last destroyed key
   let destroyed: Option<KeyId> = O.none;
 
   //when the cursor hits this, realloc
-  let next_capacity_target: number = 0;
+  let next_capacity_target: number = O.fold(() => 0, (x:number) => x) (initial_capacity);
   //next spot available for appending
   let append_cursor: number = 0;
 
   //our list!
-  let keys: KeyList = new Uint32Array(0);
+  let keys: KeyList = new Uint32Array(next_capacity_target);
 
   const is_alive = (key: Key): boolean => {
     const id = extract_key_id(key);

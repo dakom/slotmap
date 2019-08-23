@@ -11,7 +11,7 @@ const extractOption = <V>(v:Option<V>):V =>
 
 test(LABEL("insert"), () => {
 
-    const slotmap = create_slotmap();
+    const slotmap = create_slotmap(O.none);
 
     const key1 = slotmap.insert("hello");
     const key2 = slotmap.insert("world");
@@ -26,7 +26,7 @@ test(LABEL("insert"), () => {
 
 test(LABEL("insert and remove"), () => {
 
-    const slotmap = create_slotmap();
+    const slotmap = create_slotmap(O.none);
 
     const key1 = slotmap.insert("hello");
     const key2 = slotmap.insert("world");

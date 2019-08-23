@@ -6,7 +6,7 @@ const LABEL = (desc: string): string => `[keys] ${desc}`;
 
 test(LABEL("create"), () => {
 
-    const keys = init_keys();
+    const keys = init_keys(O.none);
     let key = keys.create();
 
     let key_id = extract_key_id(key);
@@ -35,7 +35,7 @@ test(LABEL("create"), () => {
     expect(0).toBe(key_version);
 });
 test(LABEL("remove"), () => {
-    const keys = init_keys();
+    const keys = init_keys(O.none);
 
     const key_0 = keys.create();
     const key_1 = keys.create();
@@ -49,7 +49,7 @@ test(LABEL("remove"), () => {
 });
 
 test(LABEL("add, remove, add"), () => {
-    const keys = init_keys();
+    const keys = init_keys(O.none);
 
     const key_0 = keys.create();
     const key_1 = keys.create();
@@ -74,7 +74,7 @@ test(LABEL("add, remove, add"), () => {
 
 //This is correct for now... should be lower though! 
 test(LABEL("version spread"), () => {
-    const keys = init_keys();
+    const keys = init_keys(O.none);
 
     const tmp_keys = new Array(10).fill(null).map(keys.create);
     const list = keys.list_all();
@@ -96,7 +96,7 @@ test(LABEL("version spread"), () => {
 });
 
 test(LABEL("version wrap"), () => {
-    const keys = init_keys();
+    const keys = init_keys(O.none);
 
     const tmp_keys = new Array(10).fill(null).map(keys.create);
     const list = keys.list_all();

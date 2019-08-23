@@ -9,6 +9,7 @@
     "clean": "rimraf ./dist && rimraf ./doc",
     "//dev": "npm-run-all -s clean -p rollup:watch",
     "dev": "npm-run-all -s clean -p test:watch",
+    "bench": "ts-node --project tsconfig.bench.json --files src/bench/benchmark.ts",
     "build": "npm-run-all clean rollup:build typings:emit",
     "typings:emit": "tsc --emitDeclarationOnly true",
     "rollup:build": "cross-env NODE_ENV=production rollup -c",
@@ -24,8 +25,10 @@
   "devDependencies": {
     "@types/jest": "24.0.18",
     "@types/node": "12.7.2",
+    "benchmark": "^2.1.4",
     "chokidar": "3.0.2",
     "cross-env": "5.2.0",
+    "fp-ts": "^2.0.5",
     "glob": "7.1.4",
     "jest": "24.9.0",
     "minify": "4.1.3",
@@ -40,12 +43,11 @@
     "rollup-plugin-uglify": "6.0.2",
     "shelljs": "0.8.3",
     "ts-jest": "24.0.2",
-    "ts-node": "8.3.0",
+    "ts-node": "^8.3.0",
     "tslib": "1.10.0",
     "typedoc": "^0.15.0",
     "typescript": "3.5.3",
-    "uglify-es": "3.3.9",
-    "fp-ts": "^2.0.5"
+    "uglify-es": "3.3.9"
   },
   "peerDependencies": {
     "fp-ts": "1.x"

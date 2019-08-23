@@ -7,12 +7,12 @@ interface Lookup<V> {
     remove: (key:Key) => void;
     get: (key:Key) => Option<V>;
     realloc: (alloc_amount:number) => void;
-    values: Readonly<Array<V>>;
+    values: () => Readonly<Array<V>>;
 
 }
-export const init_lookup = <V>():Lookup<V> => {
-    const values:Array<V> = [];
-    let indices:Uint32Array = new Uint32Array();
+export const init_lookup = <V>(initial_capacity:Option<number>):Lookup<V> => {
+    let values:Array<V> = [];
+    let indices:Uint32Array = new Uint32Array(O.fold(() => 0, (x:number) => x) (initial_capacity)).fill(INVALID_ID);
 
     const realloc = (alloc_amount:number) => {
         const new_indices= new Uint32Array(alloc_amount);
@@ -57,7 +57,7 @@ export const init_lookup = <V>():Lookup<V> => {
        set,
        remove,
        get,
-       values,
+       values: () => values,
        realloc
     };
 }
