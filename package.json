@@ -1,6 +1,6 @@
 {
   "name": "slotmap",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "slotmap",
   "main": "dist/lib.cjs.js",
   "module": "dist/lib.esm.js",
@@ -9,7 +9,7 @@
     "clean": "rimraf ./dist && rimraf ./doc",
     "//dev": "npm-run-all -s clean -p rollup:watch",
     "dev": "npm-run-all -s clean -p test:watch",
-    "build": "npm-run-all clean rollup:build typings:emit doc",
+    "build": "npm-run-all clean rollup:build typings:emit",
     "typings:emit": "tsc --emitDeclarationOnly true",
     "rollup:build": "cross-env NODE_ENV=production rollup -c",
     "rollup:watch": "cross-env NODE_ENV=production rollup -c -w",

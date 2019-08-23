@@ -89,14 +89,16 @@ export const init_keys = () => {
       (key: Key, index: number) => extract_key_id(key) === index
     );
 
-  const create = (): Key =>
+  const create_and_alloc = (): [Key, number] =>
     O.fold(
       () => {
+        let realloc_amount = 0;
         if (append_cursor === next_capacity_target) {
           next_capacity_target += ALLOC_CAPACITY;
           const new_keys = new Uint32Array(next_capacity_target);
           new_keys.set(keys);
           keys = new_keys;
+          realloc_amount = next_capacity_target;
         }
         const id = append_cursor;
         const version = 0;
@@ -104,7 +106,7 @@ export const init_keys = () => {
         keys[id] = key;
 
         append_cursor++;
-        return key;
+        return [key, realloc_amount] as any
       },
       (index: KeyId) => {
         const version = extract_key_version(keys[index]);
@@ -114,9 +116,11 @@ export const init_keys = () => {
         const key = forge({ id: index, version });
         keys[index] = key;
 
-        return key;
+        return [key, 0] as any
       }
     )(destroyed);
+
+  const create = ():Key => create_and_alloc()[0];
 
   const remove = (key: Key): Either<ErrorKind, void> => {
     const id = extract_key_id(key);
@@ -202,6 +206,7 @@ export const init_keys = () => {
    */
   return {
     create,
+    create_and_alloc,
     list_all,
     list_alive,
     is_alive,

@@ -29,7 +29,10 @@ export function create_slotmap<V>():SlotMap<V> {
     const keys = init_keys();
 
     const insert = (value:V):Key => {
-        const key = keys.create();
+        const [key, alloc_amount] = keys.create_and_alloc();
+        if(alloc_amount) {
+            lookup.realloc(alloc_amount);
+        }
         lookup.set(key, value);
         return key;
     }
@@ -47,7 +50,7 @@ export function create_slotmap<V>():SlotMap<V> {
         ) (keys.remove(key));
     
     const get = (key:Key):Option<V> =>
-        keys.is_alive(key) ? O.some(lookup.get(key)) : O.none;
+        keys.is_alive(key) ? lookup.get(key) : O.none;
 
     return {
         insert,
@@ -57,7 +60,7 @@ export function create_slotmap<V>():SlotMap<V> {
         keys: () => Array.from(keys.list_alive()),
         entries: () => 
             Array.from(keys.list_alive())
-                .map((key:Key) => ([key, lookup.get(key)]))
+                .map((key:Key) => ([key, O.getOrElse(() => null) (lookup.get(key))]))
     }
 
 }

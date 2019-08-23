@@ -2,7 +2,11 @@
 
 Slotmap in Typescript
 
-insert() gives you absolutely unique keys (within the system), and iteration over values is _fast_
+In terms of speed - the top priority is iteration over values (very, _very_ fast).
+In terms of features - insert() gives an absolutely unique key (within the given slotmap) and can be used for lookups with zero conflicts.
+The maximum number of live values a slotmap can hold is currently around 1MM. There ~is~ will be no limit for recycling.
+
+See jsperf comparing to a native Symbol+Map() approach: 
 
 Errors and missing values are expressed with [fp-ts](https://github.com/gcanti/fp-ts), so that's a peer dependency
 
