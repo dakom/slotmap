@@ -11,6 +11,7 @@ import {ErrorKind} from "./errors";
  * Creates a SlotMap with values of type V
  */
 export interface SlotMap1<A> {
+    length: () => Readonly<number>;
     insert: (value:A) => Key;
     remove: (key:Key) => Either<ErrorKind, void>;
     get: (key:Key) => Option<A>;
@@ -18,50 +19,23 @@ export interface SlotMap1<A> {
     values: Iterable<A>; 
     keys: Iterable<Key>;
     entries: Iterable<[Key,A]>;
-    length: () => Readonly<number>;
 }
-interface SlotMap1_Internal<A> {
-    insert: (values:[A]) => Key;
-    remove: (key:Key) => Either<ErrorKind, void>;
-    update_at_any_unchecked: (key:Key, type_index:number, value:A) => void; 
-    update_at_0: (key:Key, value:A) => void; 
-    update: (key:Key, values:[A]) => void; 
-    get: (key:Key) => Option<[A]>;
-    values: Iterable<[A]>; 
-    keys: Iterable<Key>;
-    entries: Iterable<[Key,[A]]>;
+interface SlotMap<A> {
     length: () => Readonly<number>;
-}
-
-export interface SlotMap2<A,B> {
-    insert: (values:[A,B]) => Key;
+    insert: (values:Array<A>) => Key;
     remove: (key:Key) => Either<ErrorKind, void>;
-    update_at_any_unchecked: (key:Key, type_index:number, value:A | B) => void; 
-    update_at_0: (key:Key, value:A) => void; 
-    update_at_1: (key:Key, value:B) => void; 
-    update: (key:Key, values:[A]) => void; 
-    get: (key:Key) => Option<[A,B]>;
-    values: Iterable<[A,B]>; 
+    get: (key:Key) => Option<Array<A>>;
+    update: (key:Key, values:Array<A>) => void; 
+    values: Iterable<Array<A>>; 
     keys: Iterable<Key>;
-    entries: Iterable<[Key,[A,B]]>;
-    length: () => Readonly<number>;
-}
-export interface SlotMap3<A,B,C> {
-    insert: (values:[A,B,C]) => Key;
-    remove: (key:Key) => Either<ErrorKind, void>;
-    get: (key:Key) => Option<[A,B,C]>;
-    update_at_any_unchecked: (key:Key, type_index:number, value:A | B | C) => void; 
-    update_at_0: (key:Key, value:A) => void; 
-    update_at_1: (key:Key, value:B) => void; 
-    update_at_2: (key:Key, value:C) => void; 
-    update: (key:Key, values:[A]) => void; 
-    values: Iterable<[A,B,C]>; 
-    keys: Iterable<Key>;
-    entries: Iterable<[Key,[A,B,C]]>;
-    length: () => Readonly<number>;
+    entries: Iterable<[Key,Array<A>]>;
+    update_some: (key:Key, type_indices:Array<number>, values:Array<A>) => Either<ErrorKind, void>; 
+    get_some: (key:Key, type_indices:Array<number>) => Option<Either<ErrorKind, Array<A>>>;
+    values_some: (type_indices:Array<number>) => Either<ErrorKind, Iterable<Array<A>>>; 
+    entries_some: (type_indices:Array<number>) => Either<ErrorKind, Iterable<[Key,Array<A>]>>;
 }
 export const create_slotmap_1= <A>():SlotMap1<A> => {
-    const slotmap = create_slotmap_any(1) as SlotMap1_Internal<A>;
+    const slotmap = create_slotmap(1) as SlotMap<A>;
 
     const makeValuesIterator = ():Iterator<A> => {
         const values = slotmap.values[Symbol.iterator]();
@@ -89,7 +63,7 @@ export const create_slotmap_1= <A>():SlotMap1<A> => {
     return {
         insert: (value:A) => slotmap.insert([value]),
         remove: slotmap.remove,
-        update: (key:Key, value:A) => slotmap.update_at_any_unchecked(key, 0, value),
+        update: (key:Key, value:A) => slotmap.update_some(key, [0], [value]),
         get: (key:Key) => O.map(xs => xs[0]) (slotmap.get(key)),
         values: {
             [Symbol.iterator]: makeValuesIterator
@@ -101,29 +75,15 @@ export const create_slotmap_1= <A>():SlotMap1<A> => {
         length: slotmap.length
     }
 }
-export const create_slotmap_2= <A,B>():SlotMap2<A,B> => {
-    const slotmap = create_slotmap_any(2);
-    return {
-        ...slotmap,
-        update_at_0: (key:Key, value:A) => slotmap.update_at_any_unchecked(key, 0, value), 
-        update_at_1: (key:Key, value:B) => slotmap.update_at_any_unchecked(key, 1, value), 
-    }
-}
-export const create_slotmap_3= <A,B,C>():SlotMap3<A,B,C> => {
-    const slotmap = create_slotmap_any(3);
-    return {
-        ...slotmap,
-        update_at_0: (key:Key, value:A) => slotmap.update_at_any_unchecked(key, 0, value), 
-        update_at_1: (key:Key, value:B) => slotmap.update_at_any_unchecked(key, 1, value), 
-        update_at_2: (key:Key, value:B) => slotmap.update_at_any_unchecked(key, 2, value), 
-    }
-}
 
-
-export function create_slotmap_any(n_value_types:number, initial_capacity?: number):any {
+export function create_slotmap(n_value_types:number, initial_capacity?: number):SlotMap<any> {
     const lookup = init_lookup<unknown>(n_value_types, initial_capacity);
     const keys = init_keys(initial_capacity);
 
+    const validate_type_indices = (type_indices:Array<number>) =>
+        type_indices.every(idx => idx < n_value_types)
+            ? E.left(ErrorKind.INVALID_TYPE_INDEX)
+            : E.right(undefined);
     const insert = (values:Array<unknown>):Key => {
         const [key, alloc_amount] = keys.create_and_alloc();
         if(alloc_amount) {
@@ -145,16 +105,16 @@ export function create_slotmap_any(n_value_types:number, initial_capacity?: numb
             }
         ) (keys.remove(key));
     
-    const get = (key:Key):Option<Array<unknown>> =>
+    const get = (key:Key):Option<Array<any>> =>
         keys.is_alive(key) ? lookup.get(key) : O.none;
 
-    const makeEntriesIterator = ():Iterator<[Key, [unknown]]> => {
+    const makeEntriesIterator = ():Iterator<[Key, [any]]> => {
         const _keys = keys[Symbol.iterator]();
 
         const next = () => {
             const {done, value} = _keys.next();
             return done
-                ? {done, value: undefined as [Key,[unknown]]}
+                ? {done, value: undefined as [Key,[any]]}
                 : {done, value: [
                     value, 
                     O.fold 
@@ -165,17 +125,47 @@ export function create_slotmap_any(n_value_types:number, initial_capacity?: numb
         return {next};
     }
 
+    const makeEntriesIteratorSome = (type_indices:Array<number>):Iterator<[Key, [any]]> => {
+        const _keys = keys[Symbol.iterator]();
+
+        const next = () => {
+            const {done, value} = _keys.next();
+
+            return done
+                ? {done, value: undefined as [Key,[any]]}
+                : {done, value: [
+                    value, 
+                    O.fold 
+                        (() => null, x => x) 
+                        (lookup.get_some(value, type_indices))
+                  ] as [Key, [unknown]]} 
+        }
+        return {next};
+    }
     return {
+        length: lookup.length,
         insert,
         remove,
         get,
+        update: lookup.update,
         values: lookup.values,
-        update_at_any_unchecked: lookup.update_at_any_unchecked,
         keys,
         entries: {
            [Symbol.iterator]: makeEntriesIterator
         },
-        length: lookup.length
+        update_some: lookup.update_some,
+        get_some: lookup.get_some,
+        values_some: lookup.values_some,
+
+        entries_some: (type_indices:Array<number>) => {
+           const validated = validate_type_indices(type_indices);
+           if(E.isLeft(validated)) {
+               return validated;
+           }
+           return E.right({
+               [Symbol.iterator]: () => makeEntriesIteratorSome(type_indices)
+           })
+       },
     }
 
 }
