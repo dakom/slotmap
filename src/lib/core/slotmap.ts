@@ -1,6 +1,4 @@
-
-import {init_lookup} from "./lookup";
-import {init_keys, Key} from "./key";
+import {INVALID_ID, extract_key_id, extract_key_version, init_keys, Key} from "./key";
 import * as O from "fp-ts/lib/Option";
 import * as E from "fp-ts/lib/Either";
 import { Option } from "fp-ts/lib/Option";
@@ -10,88 +8,82 @@ import {ErrorKind} from "./errors";
 /**
  * Creates a SlotMap with values of type V
  */
-export interface SlotMap1<A> {
-    length: () => Readonly<number>;
-    insert: (value:A) => Key;
+export interface SlotMap<A extends any[]> {
+    insert: (values:A) => Key;
     remove: (key:Key) => Either<ErrorKind, void>;
-    get: (key:Key) => Option<A>;
-    update: (key:Key, value:A) => void; 
-    values: Iterable<A>; 
+    update: (key:Key, values:Array<[number, any]>) => Either<ErrorKind, void>; 
+    get: (key:Key, type_indices:Array<number>) => Option<Either<ErrorKind, Array<any>>>;
+    values: (type_indices:Array<number>) => Either<ErrorKind, Iterable<Array<any>>>; 
+    entries: (type_indices:Array<number>) => Either<ErrorKind, Iterable<[Key,Array<any>]>>;
     keys: Iterable<Key>;
-    entries: Iterable<[Key,A]>;
-}
-interface SlotMap<A> {
     length: () => Readonly<number>;
-    insert: (values:Array<A>) => Key;
-    remove: (key:Key) => Either<ErrorKind, void>;
-    get: (key:Key) => Option<Array<A>>;
-    update: (key:Key, values:Array<A>) => void; 
-    values: Iterable<Array<A>>; 
-    keys: Iterable<Key>;
-    entries: Iterable<[Key,Array<A>]>;
-    update_some: (key:Key, type_indices:Array<number>, values:Array<A>) => Either<ErrorKind, void>; 
-    get_some: (key:Key, type_indices:Array<number>) => Option<Either<ErrorKind, Array<A>>>;
-    values_some: (type_indices:Array<number>) => Either<ErrorKind, Iterable<Array<A>>>; 
-    entries_some: (type_indices:Array<number>) => Either<ErrorKind, Iterable<[Key,Array<A>]>>;
-}
-export const create_slotmap_1= <A>():SlotMap1<A> => {
-    const slotmap = create_slotmap(1) as SlotMap<A>;
-
-    const makeValuesIterator = ():Iterator<A> => {
-        const values = slotmap.values[Symbol.iterator]();
-        const next = () => {
-            const {done, value} = values.next();
-
-            return done
-                ? {done, value: undefined}
-                : {done, value: value[0]};
-        }
-        return {next};
-    }
 
 
-    const makeEntriesIterator = ():Iterator<[Key, A]> => {
-        const entries = slotmap.entries[Symbol.iterator]();
-        const next = () => {
-            const {done, value} = entries.next();
-            return done
-                ? {done, value: undefined as [Key,A]}
-                : {done, value: [value[0], value[1][0]] as [Key,A]};
-        }
-        return {next};
-    }
-    return {
-        insert: (value:A) => slotmap.insert([value]),
-        remove: slotmap.remove,
-        update: (key:Key, value:A) => slotmap.update_some(key, [0], [value]),
-        get: (key:Key) => O.map(xs => xs[0]) (slotmap.get(key)),
-        values: {
-            [Symbol.iterator]: makeValuesIterator
-        },
-        keys: slotmap.keys,
-        entries: {
-            [Symbol.iterator]: makeEntriesIterator,
-        },
-        length: slotmap.length
-    }
+    get_all: (key:Key) => Option<A>;
+    values_all: () => Iterable<A>; 
+    entries_all: () => Iterable<[Key,A]>;
 }
 
-export function create_slotmap(n_value_types:number, initial_capacity?: number):SlotMap<any> {
-    const lookup = init_lookup<unknown>(n_value_types, initial_capacity);
+//Just an alias to make our intent clearer
+type Values <T> = Array<T>;
+
+export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMap<A> => {
+    //initialize to initial_capacity
     const keys = init_keys(initial_capacity);
 
-    const validate_type_indices = (type_indices:Array<number>) =>
-        type_indices.every(idx => idx < n_value_types)
-            ? E.left(ErrorKind.INVALID_TYPE_INDEX)
-            : E.right(undefined);
-    const insert = (values:Array<unknown>):Key => {
-        const [key, alloc_amount] = keys.create_and_alloc();
-        if(alloc_amount) {
-            lookup.realloc(alloc_amount);
+    //Initalize to a [] for each value type
+    const value_types:Array<Values<A>> = []; 
+
+    //Sparse array where each index is basically a key
+    let indices:Uint32Array = new Uint32Array(initial_capacity ? initial_capacity : 0).fill(INVALID_ID);
+
+    let n_value_types:number = 0;
+
+    let all_type_indices:Array<number> = [];
+
+    /**
+     * Inserts a new entry into the lookup 
+     * @remarks
+     * The initial insert must provide a value for every type.
+     * After insertion, update() can be called to update only some values
+     * 
+     * @param values - the values for each type of value
+     */
+
+    const insert = (values:A):Key => {
+
+        //would be nice to set this via the type system but w/e
+        if(n_value_types === 0) {
+            n_value_types = values.length;
+            all_type_indices = Array(n_value_types);
+            for(let i = 0; i < n_value_types; i++) {
+                all_type_indices[i] = i;
+                value_types[i] = [];
+            }
         }
-        lookup.set(key, values);
+
+        const [key, alloc_amount] = keys.create_and_alloc();
+
+        if(alloc_amount) {
+            realloc(alloc_amount);
+        }
+
+        const index = extract_key_id(key);
+        values.forEach((value, idx) => {
+            value_types[idx].push(value);
+        });
+
+        indices[index] = keys.alive_len() -1; 
+
         return key;
     }
+
+
+    /**
+     * Removes an entry from the slotmap
+     * @remarks 
+     * @param key - the key to remove
+     */
 
     const remove = (key:Key):Either<ErrorKind, void> => 
         E.fold(
@@ -100,72 +92,160 @@ export function create_slotmap(n_value_types:number, initial_capacity?: number):
                     ? E.right(undefined)
                     : E.left(err),
             () => {
-                lookup.remove(key);
+                const index = extract_key_id(key);
+                if(indices[index] !== INVALID_ID) {
+                    const removed = indices[index];
+                    value_types.forEach(values => 
+                        values.splice(removed, 1)
+                    );
+                    indices[index] = INVALID_ID;
+                    //This could be faster if we mainained a reverse-lookup, but then that needs to be allocated etc.
+                    for(let i = 0; i < indices.length-1; i++) {
+                        let index = indices[i];
+                        if(index !== INVALID_ID && index >= removed) {
+                            indices[i] = index - 1;
+                        }
+                    } 
+                }
                 return E.right(undefined)
             }
         ) (keys.remove(key));
-    
-    const get = (key:Key):Option<Array<any>> =>
-        keys.is_alive(key) ? lookup.get(key) : O.none;
 
-    const makeEntriesIterator = ():Iterator<[Key, [any]]> => {
-        const _keys = keys[Symbol.iterator]();
 
-        const next = () => {
-            const {done, value} = _keys.next();
-            return done
-                ? {done, value: undefined as [Key,[any]]}
-                : {done, value: [
-                    value, 
-                    O.fold 
-                        (() => null, x => x) 
-                        (lookup.get(value))
-                  ] as [Key, [unknown]]} 
-        }
-        return {next};
+    /**
+     * Updates an entry 
+     *
+     * @remarks 
+     *
+     * @param key - the key to remove
+     */
+    const update = (key:Key, values:[number, any]):Either<ErrorKind, void> => {
+            const index = extract_key_id(key);
+
+            if(indices[index] === INVALID_ID) {
+                return E.left(ErrorKind.NO_KEY);
+            }
+
+            for(let i = 0; i < values.length; i++) {
+                const [type_index, value] = values[i];
+                if(type_index > n_value_types) {
+                    return E.left(ErrorKind.INVALID_TYPE_INDEX);
+                }
+                value_types[type_index][index] = value; 
+            }
+
+            return E.right(undefined);
     }
 
-    const makeEntriesIteratorSome = (type_indices:Array<number>):Iterator<[Key, [any]]> => {
-        const _keys = keys[Symbol.iterator]();
 
-        const next = () => {
-            const {done, value} = _keys.next();
-
-            return done
-                ? {done, value: undefined as [Key,[any]]}
-                : {done, value: [
-                    value, 
-                    O.fold 
-                        (() => null, x => x) 
-                        (lookup.get_some(value, type_indices))
-                  ] as [Key, [unknown]]} 
-        }
-        return {next};
+    const get = (key:Key, type_indices:Array<number>):Option<Either<ErrorKind, A>> => {
+        const index = extract_key_id(key);
+        return (indices[index] === INVALID_ID)
+            ? O.none
+            : O.some(
+                E.map((type_indices:Array<number>) => 
+                    get_single_values_unchecked(indices[index], type_indices)
+                ) (validate_type_indices(type_indices))
+            )
     }
+
+    /**
+     * @remarks
+     * Internal use only
+     * 
+     * @param type_indices - the type of values, by index
+     */
+    const validate_type_indices = (type_indices:Array<number>) => {
+        return type_indices.every(idx => idx < n_value_types)
+            ? E.right(type_indices)
+            : E.left(ErrorKind.INVALID_TYPE_INDEX);
+    }
+
+    const realloc = (alloc_amount:number) => {
+        const new_indices= new Uint32Array(alloc_amount);
+        new_indices.set(indices);
+        new_indices.fill(INVALID_ID, indices.length);
+        indices = new_indices;
+    }
+
+
+
+    const get_single_values_unchecked = (index:number, validated_type_indices:Array<number>):A => {
+        //map is probably fine, but we know the optimized route
+        const len = validated_type_indices.length;
+        const ret = Array(len);
+        for(let ridx = 0; ridx < len; ridx++) {
+            ret[ridx] = value_types[validated_type_indices[ridx]][index];
+        }
+
+        return ret as A;
+    }
+
+    const values_iterable = (type_indices:Array<number>):Either<ErrorKind, Iterable<A>> => {
+        const validated = validate_type_indices(type_indices);
+        if(E.isLeft(validated)) {
+            return validated;
+        }
+        return E.right({
+            [Symbol.iterator]: () => {
+                let index = 0;
+                const len = keys.alive_len();
+                const next = () => {
+                    if (index >= len) {
+                        return { done: true, value: undefined }
+                    } else {
+                        const values = get_single_values_unchecked(index, type_indices);
+                        index++;
+                        return { done: false, value: values }
+                    }
+                }
+
+                return { next };
+            }
+        })
+    }
+
+    const entries_iterable = (type_indices:Array<number>) => {
+        const validated = validate_type_indices(type_indices);
+        if(E.isLeft(validated)) {
+            return validated;
+        }
+        return E.right({
+            [Symbol.iterator]: () => {
+
+                let index = 0;
+                const key_iterator = keys[Symbol.iterator]();
+
+                const next = () => {
+                    const {done, value: key_value} = key_iterator.next();
+                 
+                    if (done) {
+                        return { done: true, value: undefined }
+                    } else {
+                        const values = get_single_values_unchecked(index, type_indices);
+                        index++;
+                        return { done: false, value: [key_value, values] as [Key, A] }
+                    }
+                }
+
+                return { next };
+            }
+        })
+    }
+
+
     return {
-        length: lookup.length,
+
         insert,
         remove,
+        update,
         get,
-        update: lookup.update,
-        values: lookup.values,
+        get_all: (key:Key) => O.map(E.getOrElse(() => null)) (get(key, all_type_indices)),
         keys,
-        entries: {
-           [Symbol.iterator]: makeEntriesIterator
-        },
-        update_some: lookup.update_some,
-        get_some: lookup.get_some,
-        values_some: lookup.values_some,
-
-        entries_some: (type_indices:Array<number>) => {
-           const validated = validate_type_indices(type_indices);
-           if(E.isLeft(validated)) {
-               return validated;
-           }
-           return E.right({
-               [Symbol.iterator]: () => makeEntriesIteratorSome(type_indices)
-           })
-       },
-    }
-
+        values: values_iterable,
+        values_all: () => E.getOrElse(() => null) (values_iterable(all_type_indices)),
+        entries: entries_iterable,
+        entries_all: () => E.getOrElse(() => null) (entries_iterable(all_type_indices)),
+        length: keys.alive_len
+    };
 }

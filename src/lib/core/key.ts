@@ -77,6 +77,8 @@ export const init_keys = (initial_capacity?:number) => {
   //our list!
   let keys: KeyList = new Uint32Array(next_capacity_target);
 
+  let alive_len: number = 0;
+
   const is_alive = (key: Key): boolean => {
     const id = extract_key_id(key);
     return id < append_cursor && keys[id] === key;
@@ -90,8 +92,10 @@ export const init_keys = (initial_capacity?:number) => {
     );
 
   
-  const create_and_alloc = (): [Key, number] =>
-    O.fold(
+  const create_and_alloc = (): [Key, number] => {
+    alive_len++;
+
+    return O.fold(
       () => {
         let realloc_amount = 0;
         if (append_cursor === next_capacity_target) {
@@ -120,6 +124,7 @@ export const init_keys = (initial_capacity?:number) => {
         return [key, 0] as any
       }
     )(destroyed);
+  }
 
   const create = ():Key => create_and_alloc()[0];
 
@@ -144,6 +149,8 @@ export const init_keys = (initial_capacity?:number) => {
     keys[id] = forge({ id: next_id, version: next_version });
 
     destroyed = O.some(id);
+
+    alive_len--;
 
     return E.right(null);
   };
@@ -211,6 +218,7 @@ export const init_keys = (initial_capacity?:number) => {
     create_and_alloc,
     list_all,
     is_alive,
+    alive_len: () => alive_len,
     remove,
     destroyed_to_string,
     key_to_string,

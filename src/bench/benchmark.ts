@@ -1,159 +1,201 @@
-/*import Benchmark from "benchmark";
-import {create_slotmap, MAX_ID} from "../lib/lib";
+import Benchmark from "benchmark";
+import {create_slotmap, SlotMap, MAX_ID} from "../lib/lib";
+import {unwrap_get, prep_mock_data, multiply_mat4, fromRotationTranslationScale, Matrix4, Translation, Rotation, Scale, Velocity, Material, Collider, ACTIVE, TRANSLATION, ROTATION, SCALE, LOCAL_MATRIX, WORLD_MATRIX, VELOCITY, MATERIAL, COLLIDER} from "./benchmark-helpers";
 
-const suite_1= new Benchmark.Suite;
-const slotmap_1 = create_slotmap();
-const nativemap_1 = new Map();
+/*
+ * the idea behind the benchmark is to simulate a real-world situation
+ * where data is grouped by entity, and processed according to business-logic
+ */
 
-
-// add tests
-suite_1
-.add('Slotmap insert+remove', function() {
-    const key = slotmap_1.insert("hello");
-    slotmap_1.remove(key);
-})
-.add('Native map insert+remove', function() {
-    const key = Symbol();
-    nativemap_1.set(key, "hello");
-    nativemap_1.delete(key);
-})
-// add listeners
-.on('cycle', function(event) {
-  console.log(String(event.target));
-})
-.on('complete', function() {
-  console.log('Fastest is ' + this.filter('fastest').map('name'));
-})
-.run();
+const [slotmap, nativemap] = prep_mock_data();
 
 
-const suite_1b= new Benchmark.Suite;
-const slotmap_1b = create_slotmap(MAX_ID);
-const nativemap_1b = new Map();
+const slotmap_bench = () => {
+    //console.log("running slotmap tests for", slotmap.length(), "entities");
+    for(const key of slotmap.keys) {
+
+        //TOGGLE IS_ACTIVE IMMUTABLY
+        const [isActive] = unwrap_get(slotmap.get(key, [ACTIVE])) as [boolean];
+
+        slotmap.update(key, [
+            [ACTIVE, !isActive]
+        ]);
+
+        //UPDATE LOCAL TRANSFORMS IMMUTABLY
+        const [t, r, s] = unwrap_get(slotmap.get(key, [TRANSLATION, ROTATION, SCALE])) as [Translation, Rotation, Scale];
+        const translation = {
+            x: t.x + 1,
+            y: t.y + 1,
+            z: t.z + 1,
+        }
+
+        const rotation = {
+            x: r.x + 1,
+            y: r.y + 1,
+            z: r.z + 1,
+            w: r.w + 1,
+        }
+
+        const scale = {
+            x: s.x + 1,
+            y: s.y + 1,
+            z: s.z + 1,
+        }
+        
+        const local_matrix = fromRotationTranslationScale(rotation, translation, scale);
+
+        slotmap.update(key, [
+            [TRANSLATION, translation],
+            [ROTATION, rotation],
+            [SCALE, scale],
+            [LOCAL_MATRIX, local_matrix],
+        ]);
+       
+        //UPDATE WORLD TRANSFORMS IMMUTABLY
+        const [local_matrix_2] = unwrap_get(slotmap.get(key, [LOCAL_MATRIX])) as [Matrix4];
+        const world_matrix = multiply_mat4(local_matrix_2, local_matrix_2);
+
+        slotmap.update(key, [
+            [WORLD_MATRIX, world_matrix]
+        ]);
 
 
-// add tests
-suite_1b
-.add('Slotmap insert+remove (prealloc)', function() {
-    const key = slotmap_1b.insert("hello");
-    slotmap_1b.remove(key);
-})
-.add('Native map insert+remove', function() {
-    const key = Symbol();
-    nativemap_1b.set(key, "hello");
-    nativemap_1b.delete(key);
-})
-// add listeners
-.on('cycle', function(event) {
-  console.log(String(event.target));
-})
-.on('complete', function() {
-  console.log('Fastest is ' + this.filter('fastest').map('name'));
-})
-.run();
+        //UPDATE PHYSICS MUTABLY
+        const [velocity, collider] = unwrap_get(slotmap.get(key, [VELOCITY, COLLIDER])) as [Velocity, Collider];
+        velocity.x *= 1;
+        velocity.y *= 1;
+        velocity.z *= 1;
 
+        collider.center.x -= 1;
+        collider.center.y -= 1;
+        collider.center.z -= 1;
 
-//.run({ 'async': true });
+        //Update material partially, immutably
+        const [material] = unwrap_get(slotmap.get(key, [MATERIAL])) as [Material];
 
-const suite_2= new Benchmark.Suite;
-const slotmap_2 = create_slotmap<string>();
-const nativemap_2 = new Map();
-
-//Populate with a bunch of values... fragment a little bit with one removal
-for(let i = 0; i < 1000; i++) {
-  const value = "hello_" + i;
- 
-  const key1 = slotmap_2.insert(value);
-  slotmap_2.remove(key1);
-
-  const key2 = Symbol();
-  nativemap_2.set(key2, value);
-  nativemap_2.delete(key2);
-
-
-  slotmap_2.insert(value);
-
-  const key3 = Symbol();
-  nativemap_2.set(key3, value);
+        const new_material = {alpha: !material.alpha, ...material};
+        slotmap.update(key, [
+            [MATERIAL, new_material]
+        ]);
+        
+    }
 }
 
+const nativemap_bench = () => {
+    //console.log("running nativemap tests for", nativemap.size, "entities");
+    for(const key of nativemap.keys()) {
 
-suite_2
-.add('Slotmap iterate', function() {
+        //TOGGLE IS_ACTIVE IMMUTABLY
+        if(nativemap.has(key)) {
+            const entity = nativemap.get(key);
+            const {active} = entity;
+            nativemap.set(key, {
+                active,
+                ...entity
+            });
+        } else {
+            throw new Error("UHOH!");
+        }
 
-    const values = slotmap_2.values();
-    for(const value of values) {
-        const foo = value + " world!";
+        //UPDATE LOCAL TRANSFORMS IMMUTABLY
+        if(nativemap.has(key)) {
+            const entity = nativemap.get(key);
+            const {transform} = entity;
+            const {translation: t, rotation: r, scale: s} = transform;
+
+            const translation = {
+                x: t.x + 1,
+                y: t.y + 1,
+                z: t.z + 1,
+            }
+
+            const rotation = {
+                x: r.x + 1,
+                y: r.y + 1,
+                z: r.z + 1,
+                w: r.w + 1,
+            }
+
+            const scale = {
+                x: s.x + 1,
+                y: s.y + 1,
+                z: s.z + 1,
+            }
+        
+            const local_matrix = fromRotationTranslationScale(rotation, translation, scale);
+
+            nativemap.set(key, {
+                transform: {
+                    translation, rotation, scale, localMatrix: local_matrix 
+                },
+                ...entity
+            });
+        } else {
+            throw new Error("UHOH!");
+        }
+
+
+       
+        //UPDATE WORLD TRANSFORMS IMMUTABLY
+        if(nativemap.has(key)) {
+            const entity = nativemap.get(key);
+            const {transform} = entity;
+            const local_matrix_2 = transform.localMatrix;
+            const worldMatrix = multiply_mat4(local_matrix_2, local_matrix_2);
+
+            nativemap.set(key, {
+                worldMatrix,
+                ...entity
+            });
+        } else {
+            throw new Error("UHOH!");
+        }
+
+
+        //UPDATE PHYSICS MUTABLY
+        if(nativemap.has(key)) {
+            const entity = nativemap.get(key);
+            const {velocity, collider} = entity;
+            velocity.x *= 1;
+            velocity.y *= 1;
+            velocity.z *= 1;
+
+            collider.center.x -= 1;
+            collider.center.y -= 1;
+            collider.center.z -= 1;
+        } else {
+            throw new Error("UHOH!");
+        }
+
+
+        //Update material partially, immutably
+        if(nativemap.has(key)) {
+            const entity = nativemap.get(key);
+            const {material} = entity;
+
+            const new_material = {alpha: !material.alpha, ...material};
+
+            nativemap.set(key, {
+                material: new_material,
+                ...entity
+            });
+        } else {
+            throw new Error("UHOH!");
+        }
+
+        
     }
-})
-.add('Native map iterate', function() {
-    const values = nativemap_2.values();
-    for(const value of values) {
-        const foo = value + " world!";
-    }
-})
-// add listeners
-.on('cycle', function(event) {
-  console.log(String(event.target));
-})
-.on('complete', function() {
-  console.log('Fastest is ' + this.filter('fastest').map('name'));
+}
 
-})
-.run();
+const suite = new Benchmark.Suite();
 
-
-const suite_3= new Benchmark.Suite;
-const slotmap_3 = create_slotmap<string>();
-const nativemap_3 = new Map();
-suite_3
-.add('Slotmap insert', function() {
-
-    if(slotmap_3.values().length < MAX_ID) {
-        const key = slotmap_3.insert("hello");
-    }
-})
-.add('Native map insert', function() {
-    if(nativemap_3.size < MAX_ID) {
-        const key = Symbol();
-        nativemap_3.set(key, "hello");
-    }
-})
-// add listeners
-.on('cycle', function(event) {
-  console.log(String(event.target));
-})
-.on('complete', function() {
-  console.log('Fastest is ' + this.filter('fastest').map('name'));
-
-})
-.run();
-//.run({ 'async': true });
-
-
-const suite_3b= new Benchmark.Suite;
-const slotmap_3b = create_slotmap<string>(MAX_ID);
-const nativemap_3b = new Map();
-suite_3b
-.add('Slotmap insert (prealloc)', function() {
-
-    if(slotmap_3b.values().length < MAX_ID) {
-        const key = slotmap_3b.insert("hello");
-    }
-})
-.add('Native map insert', function() {
-    if(nativemap_3b.size < MAX_ID) {
-        const key = Symbol();
-        nativemap_3b.set(key, "hello");
-    }
-})
-// add listeners
-.on('cycle', function(event) {
-  console.log(String(event.target));
-})
-.on('complete', function() {
-  console.log('Fastest is ' + this.filter('fastest').map('name'));
-
-})
-.run();
-*/
+suite
+    .add("nativemap", nativemap_bench)
+    .add("slotmap", slotmap_bench)
+    .on('cycle', function(event) {
+      console.log(String(event.target));
+    })
+    .on('complete', function() {
+        console.log('Fastest is ' + this.filter('fastest').map('name'));
+    })
+    .run();

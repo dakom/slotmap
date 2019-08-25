@@ -2,56 +2,37 @@
 
 Slotmap in Typescript
 
-In terms of speed - the top priority is iteration over values (faster than native symbol + map). Insertion and removal are slower than native.
+This was an experiment to see about building a SlotMap as the basis for an Entity Component System in Javascript/Typescript 
 
-In terms of features - insert() gives an absolutely unique key (within the given slotmap) and can be used for lookups with zero conflicts 
+In terms of speed - the top priority is iteration over values. Less priority is given to insertion/removal
 
-The maximum number of live values a slotmap can hold is currently around 1MM. There ~is~ will be no limit for recycling.
+In terms of features - insert() gives a unique key (within the given slotmap) and can be used for lookups with zero conflicts
+There are API's for updating and getting in any order and iterating over the values and/or keys
 
+The maximum number of live values a slotmap can hold is currently around 1MM.
 
 Errors and missing values are expressed with [fp-ts](https://github.com/gcanti/fp-ts), so that's a peer dependency
 
 Inspired by [beach_map](https://github.com/leudz/beach_map) and [EnTT](https://github.com/skypjack/entt)
 
-# Installation
+# Results
 
-`npm install --save slotmap fp-ts`
+In a word: **fail**
+
+Using a native Map and updating values arbitrarily is faster (not by much - but still, it's faster)
+
+I'm not sure why... maybe I messed something up, but I think ultimately it's because JS Arrays aren't really arrays
+
+At least not in the sense of "data oriented" programming. We have no control over their alignment or allocation.
+
+In other words, if pushing to an array doesn't actually put the data next to the previous one in memory, then it might as well be anywhere and the cost we incur by maintaining an indirect lookup slows things down compared to just getting at it via a Map.
+
+Most likely JS arrays can't keep things aligned, since JS has no type information - in other words, we know an Array is only numbers, but JS has to assume the Array can hold anything...
+
+However - from another perspective, an experiment is only really a failure if we learn nothing from it. Assuming the results here are accurate - there's actually a **huge** lesson to be learned here. JS has a ceiling for how well it can be optimized on the app side. Not only does the garbage collector have an impact, but the dynamic typing means we're at the mercy of "support all the things" and can't do better than that. 
 
 # Usage
 
-First, create a slotmap:
-```
-const slotmap = create_slotmap()
-```
+See the tests and benchmark, as well as source :)
 
-If you want the type system to ensure that all values are the same type, supply it:
-
-```
-const slotmap = create_slotmap<string>()
-```
-
-Once you have your slotmap, use the following methods on it (`V` is the type parameter mentioned above. It can also be `any`):
-
-**insert: (value:V) => Key**
-
-&nbsp;&nbsp;&nbsp;&nbsp;Insert a value, get a unique Key back (which can be used to remove or get the value later)
-
-**remove: (key:Key) => Either<ErrorKind, void>**
-
-&nbsp;&nbsp;&nbsp;&nbsp;Remove a key/value
-
-**get: (key:Key) => Option<V>**
-
-&nbsp;&nbsp;&nbsp;&nbsp;Get a value by providing the Key
-
-**values: () => Readonly<Array<V>>**
-
-&nbsp;&nbsp;&nbsp;&nbsp;Get an array of values
-
-**keys: () => Readonly<Array<Key>>**
-
-&nbsp;&nbsp;&nbsp;&nbsp;Get an array of keys 
-
-**entries: () => Readonly<Array<[Key,V]>>**
-
-&nbsp;&nbsp;&nbsp;&nbsp;Get an array of key/value pairs
+If you want to use the lib, for whatever reason, it is published to npm under `slotmap`
