@@ -7,6 +7,9 @@ import {ErrorKind} from "./errors";
 
 /**
  * Creates a SlotMap with values of type V
+ * TODO - fix the `any`s.. see: https://tinyurl.com/y4c5ujm9
+ * 
+ * Also fix more docs below ;)
  */
 export interface SlotMap<A extends any[]> {
     insert: (values:A) => Key;
@@ -81,7 +84,7 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
 
     /**
      * Removes an entry from the slotmap
-     * @remarks 
+     * 
      * @param key - the key to remove
      */
 
@@ -115,9 +118,8 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
     /**
      * Updates an entry 
      *
-     * @remarks 
-     *
-     * @param key - the key to remove
+     * @param key - the key to update 
+     * @param values: tuples of index/value pairs where the index is the type index
      */
     const update = (key:Key, values:[number, any]):Either<ErrorKind, void> => {
             const index = extract_key_id(key);
@@ -137,7 +139,11 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
             return E.right(undefined);
     }
 
-
+    /**
+     * 
+     * @param key  - the key to get
+     * @param type_indices - an array of types to query, by the index type
+     */
     const get = (key:Key, type_indices:Array<number>):Option<Either<ErrorKind, A>> => {
         const index = extract_key_id(key);
         return (indices[index] === INVALID_ID)
