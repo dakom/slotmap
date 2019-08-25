@@ -1,6 +1,6 @@
 import Benchmark from "benchmark";
 import {create_slotmap, SlotMap, MAX_ID} from "../lib/lib";
-import {unwrap_get, prep_mock_data, multiply_mat4, fromRotationTranslationScale, Matrix4, Translation, Rotation, Scale, Velocity, Material, Collider, ACTIVE, TRANSLATION, ROTATION, SCALE, LOCAL_MATRIX, WORLD_MATRIX, VELOCITY, MATERIAL, COLLIDER} from "./benchmark-helpers";
+import {unwrap_get, unwrap_get_native, prep_mock_data, multiply_mat4, fromRotationTranslationScale, Matrix4, Translation, Rotation, Scale, Velocity, Material, Collider, ACTIVE, TRANSLATION, ROTATION, SCALE, LOCAL_MATRIX, WORLD_MATRIX, VELOCITY, MATERIAL, COLLIDER} from "./benchmark-helpers";
 
 /*
  * the idea behind the benchmark is to simulate a real-world situation
@@ -86,22 +86,20 @@ const nativemap_bench = () => {
     for(const key of nativemap.keys()) {
 
         //TOGGLE IS_ACTIVE IMMUTABLY
-        if(nativemap.has(key)) {
-            const entity = nativemap.get(key);
-            const {active} = entity;
+        {
+            const entity = unwrap_get_native(key, nativemap)
+            const { active } = entity;
             nativemap.set(key, {
                 active,
                 ...entity
             });
-        } else {
-            throw new Error("UHOH!");
         }
 
         //UPDATE LOCAL TRANSFORMS IMMUTABLY
-        if(nativemap.has(key)) {
-            const entity = nativemap.get(key);
-            const {transform} = entity;
-            const {translation: t, rotation: r, scale: s} = transform;
+        {
+            const entity = unwrap_get_native(key, nativemap)
+            const { transform } = entity;
+            const { translation: t, rotation: r, scale: s } = transform;
 
             const translation = {
                 x: t.x + 1,
@@ -121,25 +119,21 @@ const nativemap_bench = () => {
                 y: s.y + 1,
                 z: s.z + 1,
             }
-        
+
             const local_matrix = fromRotationTranslationScale(rotation, translation, scale);
 
             nativemap.set(key, {
                 transform: {
-                    translation, rotation, scale, localMatrix: local_matrix 
+                    translation, rotation, scale, localMatrix: local_matrix
                 },
                 ...entity
             });
-        } else {
-            throw new Error("UHOH!");
         }
-
-
        
         //UPDATE WORLD TRANSFORMS IMMUTABLY
-        if(nativemap.has(key)) {
-            const entity = nativemap.get(key);
-            const {transform} = entity;
+        {
+            const entity = unwrap_get_native(key, nativemap)
+            const { transform } = entity;
             const local_matrix_2 = transform.localMatrix;
             const worldMatrix = multiply_mat4(local_matrix_2, local_matrix_2);
 
@@ -147,14 +141,12 @@ const nativemap_bench = () => {
                 worldMatrix,
                 ...entity
             });
-        } else {
-            throw new Error("UHOH!");
         }
 
 
         //UPDATE PHYSICS MUTABLY
-        if(nativemap.has(key)) {
-            const entity = nativemap.get(key);
+        {
+            const entity = unwrap_get_native(key, nativemap)
             const {velocity, collider} = entity;
             velocity.x *= 1;
             velocity.y *= 1;
@@ -163,14 +155,11 @@ const nativemap_bench = () => {
             collider.center.x -= 1;
             collider.center.y -= 1;
             collider.center.z -= 1;
-        } else {
-            throw new Error("UHOH!");
-        }
-
+        } 
 
         //Update material partially, immutably
-        if(nativemap.has(key)) {
-            const entity = nativemap.get(key);
+        {
+            const entity = unwrap_get_native(key, nativemap)
             const {material} = entity;
 
             const new_material = {alpha: !material.alpha, ...material};
@@ -179,8 +168,6 @@ const nativemap_bench = () => {
                 material: new_material,
                 ...entity
             });
-        } else {
-            throw new Error("UHOH!");
         }
 
         

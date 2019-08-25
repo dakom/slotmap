@@ -76,6 +76,14 @@ export const unwrap_get = <V>(target:Option<Either<any, V>>):V =>
         x => x as Either<any, V>
     ) (target)) as V;
 
+export const unwrap_get_native = (key, nativemap:MyNativeMap):Entity => 
+        unwrap_get(get_native(key, nativemap));
+
+export const get_native = (key, nativemap:MyNativeMap) => 
+        nativemap.has(key)
+            ? O.some(E.right(nativemap.get(key)))
+            : O.none
+
 const insert_slotmap = (slotmap:MySlotMap) => {
     const key = slotmap.insert([
         rand_bool(),
