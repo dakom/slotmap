@@ -12,9 +12,9 @@ In terms of speed - the top priority is iteration over values. Less priority is 
 
 In terms of features - insert() gives a unique key (within the given slotmap) and can be used for lookups with zero conflicts (until the "generation/version" wraps... but that's a story for another time and isn't relevant to the test here)
 
-There are API's for updating and getting in any order and iterating over the values and/or keys
+There are API's for updating and getting in any order and iterating over the values and/or keys, as well as selectively culling the values to get only what's needed.
 
-Basically - things can be thought of as a structure of arrays, or an array of structures, or a map of structures, and the API supports all of those (just like you can iterate over a native Map's values or keys or do a lookup by key, but here we're storing things in arrays - and **only** arrays, no objects or hashmaps).
+Basically - things can be thought of as a structure of arrays, or an array of structures, or a map of structures, and the API supports all of those (just like you can iterate over a native Map's values and destructure objects, or keys or do a lookup by key, but here we're storing things in arrays - and **only** Arrays + TypedArays, no objects or hashmaps anywhere!).
 
 The maximum number of live keys it can hold is currently around 1MM.
 
