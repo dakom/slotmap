@@ -30,13 +30,13 @@ In a word: **fail**
 
 Using a native Map and updating values arbitrarily is faster (not by much - but still, it's faster)
 
-I'm not sure why... maybe I messed something up, but I think ultimately it's because JS Arrays aren't really arrays
+I'm not sure why... maybe I messed something up, or maybe it's the fp-ts overhead, but I am _guessing_ that ultimate it's because JS Arrays aren't really arrays
 
 At least not in the sense of "data oriented" programming. We have no control over their alignment or allocation.
 
 If pushing to an array doesn't actually put the data next to the previous one in memory, then it might as well be anywhere and the cost we incur by maintaining an indirect lookup slows things down compared to just getting at it via a Map.
 
-Most likely JS arrays can't keep things aligned, since JS has no type information - in other words, we know an Array is only numbers, but JS has to assume the Array can hold anything...
+Most likely JS arrays can't keep things aligned, since JS has no type information - sure, we know an Array is only numbers or specific objects or whatever, but JS has to assume the Array can hold anything...
 
 However - from another perspective, an experiment is only really a failure if we learn nothing from it. Assuming the results here are accurate - there's actually a **huge** lesson to be learned here. JS has a ceiling for how well it can be optimized on the app side. Not only does the garbage collector have an impact, but the dynamic typing means we're at the mercy of "support all the things" and can't do better than that. 
 
