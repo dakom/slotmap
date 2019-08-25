@@ -2,7 +2,7 @@
 
 Slotmap in Typescript
 
-This was an experiment to see about building a SlotMap as the basis for an Entity Component System in Javascript/Typescript 
+This was an experiment to see about building something like a multi-value SlotMap as the basis for an Entity Component System in Javascript/Typescript (just for experimental purposes)
 
 In terms of speed - the top priority is iteration over values. Less priority is given to insertion/removal
 
