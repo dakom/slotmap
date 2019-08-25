@@ -28,9 +28,9 @@ Inspired by [beach_map](https://github.com/leudz/beach_map) and [EnTT](https://g
 
 In a word: **fail**
 
-Using a native Map and updating values arbitrarily is faster (not by much - but still, it's faster)
+OK technically it's a success - but using a native Map and updating values arbitrarily is only _slightly_ slower. I'd expect it to be a much bigger difference
 
-I'm not sure why... maybe I messed something up, or maybe it's the fp-ts overhead, but I am _guessing_ that ultimate it's because JS Arrays aren't really arrays
+I'm not sure why... maybe I messed something up, but I am _guessing_ that ultimate it's because JS Arrays aren't really arrays
 
 At least not in the sense of "data oriented" programming. We have no control over their alignment or allocation.
 
