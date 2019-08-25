@@ -28,17 +28,17 @@ Inspired by [beach_map](https://github.com/leudz/beach_map) and [EnTT](https://g
 
 In a word: **fail**
 
-OK technically it's a success - but using a native Map and updating values arbitrarily is only _slightly_ slower. I'd expect it to be a much bigger difference
+OK technically it's a success - but using a native Map and updating values arbitrarily is only _slightly_ slower, they are essentially equal. I'd expect it to be a much bigger difference
 
-I'm not sure why... maybe I messed something up, but I am _guessing_ that ultimaty it's because JS Arrays aren't really arrays
+I'm not sure why... maybe I messed something up, but I am _guessing_ that ultimately it's because JS Arrays aren't really arrays
 
 At least not in the sense of "data oriented" programming. We have no control over their alignment or allocation.
 
 If pushing to an array doesn't actually put the data next to the previous one in memory, then it might as well be anywhere. If we can't pre-allocate for our data, it'll be similarly fragmented or slow.
 
-JS has no type information - sure, we know an Array is only numbers or specific objects or whatever, but JS has to assume the Array can hold anything... so it's limited in what it can do.
+JS has no type information - sure, we know an Array is only strings of a certain length or specific objects or whatever, but JS has to assume the Array can hold anything... so it's limited in what it can do.
 
-So - from another perspective, an experiment is only really a failure if we learn nothing from it. Assuming the results here are accurate - there's actually a **huge** lesson to be learned here. JS has a ceiling for how well it can be optimized on the app side. Not only does the garbage collector have an impact, but the dynamic typing means we're at the mercy of "support all the things" and can't do better than that. 
+From another perspective, an experiment is only really a failure if we learn nothing from it. Assuming the results here are accurate - there's actually a **huge** lesson to be learned here. JS has a ceiling for how well it can be optimized on the app side. Not only does the garbage collector have an impact, but the dynamic typing means we're at the mercy of "support all the things" and can't do better than that when it comes to optimizing for memory alignment in our JS code.
 
 # Usage
 
