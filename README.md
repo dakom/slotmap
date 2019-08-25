@@ -10,11 +10,11 @@ See Results below :)
 
 In terms of speed - the top priority is iteration over values. Less priority is given to insertion/removal
 
-In terms of features - insert() gives a unique key (within the given slotmap) and can be used for lookups with zero conflicts
+In terms of features - insert() gives a unique key (within the given slotmap) and can be used for lookups with zero conflicts (until the "generation/version" wraps... but that's a story for another time and isn't relevant to the test here)
 
 There are API's for updating and getting in any order and iterating over the values and/or keys
 
-Basically - things can be thought of as a structure of arrays, or an array of structures, or a map of structures.
+Basically - things can be thought of as a structure of arrays, or an array of structures, or a map of structures, and the API supports all of those (just like you can iterate over a native Map's values or keys or do a lookup by key, but here we're storing things in arrays - and **only** arrays, no objects or hashmaps).
 
 The maximum number of live keys it can hold is currently around 1MM.
 
@@ -22,7 +22,7 @@ Errors and missing values are expressed with [fp-ts](https://github.com/gcanti/f
 
 Inspired by [beach_map](https://github.com/leudz/beach_map) and [EnTT](https://github.com/skypjack/entt)
 
-(but doesn't go near as far as either of those in terms of features)
+(but doesn't go near as far as either of those in terms of features or performance)
 
 # Results
 
