@@ -34,7 +34,7 @@ I'm not sure why... maybe I messed something up, but I think ultimately it's bec
 
 At least not in the sense of "data oriented" programming. We have no control over their alignment or allocation.
 
-In other words, if pushing to an array doesn't actually put the data next to the previous one in memory, then it might as well be anywhere and the cost we incur by maintaining an indirect lookup slows things down compared to just getting at it via a Map.
+If pushing to an array doesn't actually put the data next to the previous one in memory, then it might as well be anywhere and the cost we incur by maintaining an indirect lookup slows things down compared to just getting at it via a Map.
 
 Most likely JS arrays can't keep things aligned, since JS has no type information - in other words, we know an Array is only numbers, but JS has to assume the Array can hold anything...
 
