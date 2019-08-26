@@ -16,7 +16,7 @@ export const MATERIAL = 6;
 export const WORLD_MATRIX = 7;
 export const COLLIDER = 8;
 
-const N_ENTITIES = 100;
+const N_ENTITIES = 1000;
 
 export const simulate_quick_either = <V>(value:V):V =>
     E.getOrElse(() => null) (E.right(value));

@@ -21,22 +21,20 @@ When the slotmap is treated like a regular map, it's pretty much equal (actually
 
 **100 entries:**
 ```
-running benchmark for 100 entries
-
-nativemap keys x 5,015 ops/sec ±0.38% (95 runs sampled)
-slotmap keys x 6,182 ops/sec ±1.15% (92 runs sampled)
-nativemap values x 6,131 ops/sec ±1.90% (93 runs sampled)
-slotmap values x 10,448 ops/sec ±0.87% (90 runs sampled)
+nativemap keys x 5,018 ops/sec ±0.50% (95 runs sampled)
+slotmap keys x 5,973 ops/sec ±0.72% (94 runs sampled)
+nativemap values x 6,276 ops/sec ±0.40% (93 runs sampled)
+slotmap values x 10,678 ops/sec ±1.32% (94 runs sampled)
 
 Fastest is slotmap values
 ```
 
 **1000 entries:**
 ```
-nativemap keys x 397 ops/sec ±2.75% (87 runs sampled)
-slotmap keys x 539 ops/sec ±0.74% (93 runs sampled)
-nativemap values x 599 ops/sec ±0.46% (91 runs sampled)
-slotmap values x 1,021 ops/sec ±3.11% (89 runs sampled)
+nativemap keys x 402 ops/sec ±2.51% (88 runs sampled)
+slotmap keys x 480 ops/sec ±0.87% (90 runs sampled)
+nativemap values x 610 ops/sec ±0.49% (93 runs sampled)
+slotmap values x 1,033 ops/sec ±3.10% (89 runs sampled)
 
 Fastest is slotmap values
 ```

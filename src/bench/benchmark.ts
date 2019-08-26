@@ -109,6 +109,11 @@ const slotmap_bench_keys = () => {
             z: s.z + 1,
         }
         
+        slotmap.replace(key, [
+            [TRANSLATION, translation],
+            [ROTATION, rotation],
+            [SCALE, scale],
+        ]);
 
         //UPDATE LOCAL MATRIX IMMUTABLY
         const [t2, r2, s2] = unwrap_get(slotmap.get(key, [TRANSLATION, ROTATION, SCALE])) as [Translation, Rotation, Scale];
