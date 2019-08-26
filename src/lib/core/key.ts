@@ -218,6 +218,7 @@ export const init_keys = (initial_capacity?:number) => {
     create_and_alloc,
     list_all,
     is_alive,
+    get_at_index: (index:number) => keys[index],
     alive_len: () => alive_len,
     remove,
     destroyed_to_string,

@@ -26,19 +26,15 @@ Inspired by [beach_map](https://github.com/leudz/beach_map) and [EnTT](https://g
 
 # Results
 
-In a word: **fail**
+When the slotmap is treated like a regular map, it's pretty much equal.
 
-OK technically it's a success - but using a native Map and updating values arbitrarily is only _slightly_ slower, they are essentially equal. I'd expect it to be a much bigger difference
+When the values are iterated like an ECS, it's _significantly_ better:
 
-I'm not sure why... maybe I messed something up, but I am _guessing_ that ultimately it's because JS Arrays aren't really arrays
-
-At least not in the sense of "data oriented" programming. We have no control over their alignment or allocation.
-
-If pushing to an array doesn't actually put the data next to the previous one in memory, then it might as well be anywhere. If we can't pre-allocate for our data, it'll be similarly fragmented or slow.
-
-JS has no type information - sure, we know an Array is only strings of a certain length or specific objects or whatever, but JS has to assume the Array can hold anything... so it's limited in what it can do.
-
-From another perspective, an experiment is only really a failure if we learn nothing from it. Assuming the results here are accurate - there's actually a **huge** lesson to be learned here. JS has a ceiling for how well it can be optimized on the app side. Not only does the garbage collector have an impact, but the dynamic typing means we're at the mercy of "support all the things" and can't do better than that when it comes to optimizing for memory alignment in our JS code.
+```
+nativemap keys x 6,665 ops/sec ±0.41% (92 runs sampled)
+slotmap keys x 6,787 ops/sec ±0.47% (94 runs sampled)
+slotmap values x 10,760 ops/sec ±1.35% (93 runs sampled)
+```
 
 # Usage
 

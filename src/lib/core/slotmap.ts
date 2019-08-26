@@ -12,16 +12,25 @@ import {ErrorKind} from "./errors";
  * Also fix more docs below ;)
  */
 export interface SlotMap<A extends any[]> {
+    //single entries
     insert: (values:A) => Key;
     remove: (key:Key) => Either<ErrorKind, void>;
-    update: (key:Key, values:Array<[number, any]>) => Either<ErrorKind, void>; 
-    get: (key:Key, type_indices:Array<number>) => Option<Either<ErrorKind, Array<any>>>;
-    values: (type_indices:Array<number>) => Either<ErrorKind, Iterable<Array<any>>>; 
-    entries: (type_indices:Array<number>) => Either<ErrorKind, Iterable<[Key,Array<any>]>>;
+    replace: (key:Key, values:Array<[number, any]>) => Either<ErrorKind, void>; 
+    get: <T extends any[]>(key:Key, type_indices:Array<number>) => Option<Either<ErrorKind, T>>;
+
+    //entire list
+    update: <T extends any[]>(pred: (values:T, key:Key) => T, type_indices:Array<number>) => Either<ErrorKind, void>; 
+    //it's on the user to verify that the indices match the types here
+    update_rw: <TR extends any[], TW extends any[]>(pred: (valuesr:TR, key:Key) => TW, type_indices_read:Array<number>, type_indices_write:Array<number>) => Either<ErrorKind, void>;
+    values: <T extends any[]>(type_indices:Array<number>) => Either<ErrorKind, Iterable<T>>; 
+    entries: <T extends any[]>(type_indices:Array<number>) => Either<ErrorKind, Iterable<[Key,T]>>;
+
+    //other
     keys: Iterable<Key>;
     length: () => Readonly<number>;
 
-
+    //helpers
+    update_all: (pred: (values:A, key:Key) => A) => void;
     get_all: (key:Key) => Option<A>;
     values_all: () => Iterable<A>; 
     entries_all: () => Iterable<[Key,A]>;
@@ -121,7 +130,7 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
      * @param key - the key to update 
      * @param values: tuples of index/value pairs where the index is the type index
      */
-    const update = (key:Key, values:[number, any]):Either<ErrorKind, void> => {
+    const replace = (key:Key, values:[number, any]):Either<ErrorKind, void> => {
             const index = extract_key_id(key);
 
             if(indices[index] === INVALID_ID) {
@@ -144,13 +153,13 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
      * @param key  - the key to get
      * @param type_indices - an array of types to query, by the index type
      */
-    const get = (key:Key, type_indices:Array<number>):Option<Either<ErrorKind, A>> => {
+    const get = <T extends any[]>(key:Key, type_indices:Array<number>):Option<Either<ErrorKind, T>> => {
         const index = extract_key_id(key);
         return (indices[index] === INVALID_ID)
             ? O.none
             : O.some(
                 E.map((type_indices:Array<number>) => 
-                    get_single_values_unchecked(indices[index], type_indices)
+                    get_single_values_unchecked<T>(indices[index], type_indices)
                 ) (validate_type_indices(type_indices))
             )
     }
@@ -176,7 +185,7 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
 
 
 
-    const get_single_values_unchecked = (index:number, validated_type_indices:Array<number>):A => {
+    const get_single_values_unchecked = <T extends any[]>(index:number, validated_type_indices:Array<number>):T => {
         //map is probably fine, but we know the optimized route
         const len = validated_type_indices.length;
         const ret = Array(len);
@@ -184,10 +193,55 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
             ret[ridx] = value_types[validated_type_indices[ridx]][index];
         }
 
-        return ret as A;
+        return ret as T;
     }
 
-    const values_iterable = (type_indices:Array<number>):Either<ErrorKind, Iterable<A>> => {
+    const update = <T extends any[]>(pred: (values:T, key:Key) => T, type_indices:Array<number>):Either<ErrorKind, void> => {
+        const validated = validate_type_indices(type_indices);
+        if(E.isLeft(validated)) {
+            return validated;
+        }
+
+        const type_indices_len = type_indices.length;
+        const keys_len = keys.alive_len();
+        for(let index = 0; index < keys_len; index++) {
+            const key = keys.get_at_index(index);
+            const old_values = get_single_values_unchecked<T>(index, type_indices);
+            const new_values = pred(old_values, key);
+
+            for(let ridx = 0; ridx < type_indices_len; ridx++) {
+                value_types[type_indices[ridx]][index] = new_values[ridx];
+            }
+        }
+
+        return E.right(null);
+    }
+
+    const update_rw = <TR extends any[], TW extends any[]>(pred: (valuesr:TR, key:Key) => TW, type_indices_read:Array<number>, type_indices_write:Array<number>):Either<ErrorKind, void> => {
+        const validated_read = validate_type_indices(type_indices_read);
+        if(E.isLeft(validated_read)) {
+            return validated_read;
+        }
+        const validated_write = validate_type_indices(type_indices_write);
+        if(E.isLeft(validated_write)) {
+            return validated_write;
+        }
+
+        const type_indices_len = type_indices_write.length;
+        const keys_len = keys.alive_len();
+        for(let index = 0; index < keys_len; index++) {
+            const key = keys.get_at_index(index);
+            const old_values = get_single_values_unchecked<TR>(index, type_indices_read);
+            const new_values = pred(old_values, key);
+
+            for(let ridx = 0; ridx < type_indices_len; ridx++) {
+                value_types[type_indices_write[ridx]][index] = new_values[ridx];
+            }
+        }
+
+        return E.right(null);
+    }
+    const values_iterable = <T extends any[]>(type_indices:Array<number>):Either<ErrorKind, Iterable<T>> => {
         const validated = validate_type_indices(type_indices);
         if(E.isLeft(validated)) {
             return validated;
@@ -200,7 +254,7 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
                     if (index >= len) {
                         return { done: true, value: undefined }
                     } else {
-                        const values = get_single_values_unchecked(index, type_indices);
+                        const values = get_single_values_unchecked<T>(index, type_indices);
                         index++;
                         return { done: false, value: values }
                     }
@@ -211,7 +265,7 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
         })
     }
 
-    const entries_iterable = (type_indices:Array<number>) => {
+    const entries_iterable = <T extends any[]>(type_indices:Array<number>):Either<ErrorKind, Iterable<[Key, T]>>=> {
         const validated = validate_type_indices(type_indices);
         if(E.isLeft(validated)) {
             return validated;
@@ -228,9 +282,9 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
                     if (done) {
                         return { done: true, value: undefined }
                     } else {
-                        const values = get_single_values_unchecked(index, type_indices);
+                        const values = get_single_values_unchecked<T>(index, type_indices);
                         index++;
-                        return { done: false, value: [key_value, values] as [Key, A] }
+                        return { done: false, value: [key_value, values] as [Key, T] }
                     }
                 }
 
@@ -244,7 +298,10 @@ export const create_slotmap = <A extends any[]>(initial_capacity?:number):SlotMa
 
         insert,
         remove,
+        replace,
         update,
+        update_rw,
+        update_all: (pred: (values:A, key:Key) => A) => E.getOrElse(() => null) (update(pred, all_type_indices)),
         get,
         get_all: (key:Key) => O.map(E.getOrElse(() => null)) (get(key, all_type_indices)),
         keys,

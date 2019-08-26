@@ -4,6 +4,7 @@ import * as O from "fp-ts/lib/Option";
 import {Option} from "fp-ts/lib/Option";
 import {Either} from "fp-ts/lib/Either";
 import * as E from "fp-ts/lib/Either";
+import { stringLiteral } from "@babel/types";
 
 
 const extractOption = <V>(v:Option<V>):V => 
@@ -41,7 +42,7 @@ test("slotmap", () => {
     expect(42).toBe(extractOption(slotmap.get_all(key2))[2]);
 
     //update
-    slotmap.update(key2, [[1, O.some("computer")]]);
+    slotmap.replace(key2, [[1, O.some("computer")]]);
     expect("computer").toBe(extractOption(extractOption(slotmap.get_all(key2))[1]));
 
     //removal
@@ -87,4 +88,37 @@ test("slotmap", () => {
         [key3, ["yay", 7]]
     ]).toEqual(Array.from(extractEither(slotmap.entries([0,2]))));
 
+    //iteration w/ for 
+    let index = 0;
+    for(const [label, num] of extractEither(slotmap.values<[string, number]>([0,2]))) {
+        if(index === 0) {
+            expect("hello").toBe(label);
+            expect(10).toBe(num);
+        } else {
+            expect("yay").toBe(label);
+            expect(7).toBe(num);
+        }
+
+        index++;
+    }
+
+    //update via iteration
+    slotmap.update<[string, number]>(([label, num], key) => [label + "!", num + 1], [0,2])
+    expect([
+        ["hello!", 11],
+        ["yay!", 8]
+    ]).toEqual(Array.from(extractEither(slotmap.values([0,2]))));
+
+
+    //update via rw iteration
+    slotmap.update_rw<[string, number], [number]>(
+        ([label, num], key) => 
+            label === "hello!" ? [9] : [num]
+        , [0, 2], [2]
+    );
+
+    expect([
+        ["hello!", 9],
+        ["yay!", 8]
+    ]).toEqual(Array.from(extractEither(slotmap.values([0,2]))));
 });

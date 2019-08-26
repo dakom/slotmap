@@ -15,6 +15,8 @@ test(LABEL("create"), () => {
     expect(0).toBe(key_id);
     expect(0).toBe(key_version);
 
+    expect(key).toBe(keys.get_at_index(key_id));
+
     key = keys.create();
 
     key_id = extract_key_id(key);
@@ -22,17 +24,23 @@ test(LABEL("create"), () => {
 
     expect(1).toBe(key_id);
     expect(0).toBe(key_version);
+    expect(key).toBe(keys.get_at_index(key_id));
+    
     const all_keys = keys.list_all();
 
-    key_id = extract_key_id(all_keys[0]);
-    key_version = extract_key_version(all_keys[0]);
+    key = all_keys[0];
+    key_id = extract_key_id(key);
+    key_version = extract_key_version(key);
     expect(0).toBe(key_id);
     expect(0).toBe(key_version);
+    expect(key).toBe(keys.get_at_index(key_id));
 
-    key_id = extract_key_id(all_keys[1]);
-    key_version = extract_key_version(all_keys[1]);
+    key = all_keys[1];
+    key_id = extract_key_id(key);
+    key_version = extract_key_version(key);
     expect(1).toBe(key_id);
     expect(0).toBe(key_version);
+    expect(key).toBe(keys.get_at_index(key_id));
 });
 test(LABEL("remove"), () => {
     const keys = init_keys();
@@ -67,6 +75,7 @@ test(LABEL("add, remove, add"), () => {
 
     expect(Uint32Array.from([0, 1,2,3])).toEqual(alive_ids);
     expect(Uint32Array.from([0, 1,1,0])).toEqual(alive_versions);
+    expect(alive_keys[0]).toBe(keys.get_at_index(alive_ids[0]));
 
     //console.log(keys_to_string(alive_keys));
 

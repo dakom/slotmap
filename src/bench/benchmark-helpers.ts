@@ -84,6 +84,9 @@ export const get_native = (key, nativemap:MyNativeMap) =>
             ? O.some(E.right(nativemap.get(key)))
             : O.none
 
+export const unwrap_either = <T>(value:Either<any, T>):T => 
+        E.fold(() => null, (x:T) => x) (value);
+
 const insert_slotmap = (slotmap:MySlotMap) => {
     const key = slotmap.insert([
         rand_bool(),
