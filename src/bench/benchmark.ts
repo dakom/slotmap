@@ -1,6 +1,6 @@
 import Benchmark from "benchmark";
 import {create_slotmap, SlotMap, MAX_ID} from "../lib/lib";
-import {unwrap_get, unwrap_get_native, unwrap_either, prep_mock_data, multiply_mat4, fromRotationTranslationScale, Matrix4, Translation, Rotation, Scale, Velocity, Material, Collider, ACTIVE, TRANSLATION, ROTATION, SCALE, LOCAL_MATRIX, WORLD_MATRIX, VELOCITY, MATERIAL, COLLIDER} from "./benchmark-helpers";
+import {unwrap_get, unwrap_get_native, unwrap_either, prep_mock_data, multiply_mat4, fromRotationTranslationScale, Matrix4, Translation, Rotation, Scale, Velocity, Material, Collider, ACTIVE, TRANSLATION, ROTATION, SCALE, LOCAL_MATRIX, WORLD_MATRIX, VELOCITY, MATERIAL, COLLIDER, simulate_quick_either} from "./benchmark-helpers";
 
 /*
  * the idea behind the benchmark is to simulate a real-world situation
@@ -88,7 +88,7 @@ const slotmap_bench_keys = () => {
             [ACTIVE, !isActive]
         ]);
 
-        //UPDATE LOCAL TRANSFORMS IMMUTABLY
+        //UPDATE LOCAL POSITIONS IMMUTABLY
         const [t, r, s] = unwrap_get(slotmap.get(key, [TRANSLATION, ROTATION, SCALE])) as [Translation, Rotation, Scale];
         const translation = {
             x: t.x + 1,
@@ -109,15 +109,15 @@ const slotmap_bench_keys = () => {
             z: s.z + 1,
         }
         
-        const local_matrix = fromRotationTranslationScale(rotation, translation, scale);
 
+        //UPDATE LOCAL MATRIX IMMUTABLY
+        const [t2, r2, s2] = unwrap_get(slotmap.get(key, [TRANSLATION, ROTATION, SCALE])) as [Translation, Rotation, Scale];
+        const local_matrix = fromRotationTranslationScale(rotation, translation, scale);
         slotmap.replace(key, [
-            [TRANSLATION, translation],
-            [ROTATION, rotation],
-            [SCALE, scale],
             [LOCAL_MATRIX, local_matrix],
         ]);
        
+
         //UPDATE WORLD TRANSFORMS IMMUTABLY
         const [local_matrix_2] = unwrap_get(slotmap.get(key, [LOCAL_MATRIX])) as [Matrix4];
         const world_matrix = multiply_mat4(local_matrix_2, local_matrix_2);
@@ -157,12 +157,12 @@ const nativemap_bench_keys = () => {
             const entity = unwrap_get_native(key, nativemap)
             const { active } = entity;
             nativemap.set(key, {
+                ...entity,
                 active,
-                ...entity
             });
         }
 
-        //UPDATE LOCAL TRANSFORMS IMMUTABLY
+        //UPDATE LOCAL POSITIONS IMMUTABLY
         {
             const entity = unwrap_get_native(key, nativemap)
             const { transform } = entity;
@@ -187,16 +187,33 @@ const nativemap_bench_keys = () => {
                 z: s.z + 1,
             }
 
-            const local_matrix = fromRotationTranslationScale(rotation, translation, scale);
 
             nativemap.set(key, {
+                ...entity,
                 transform: {
-                    translation, rotation, scale, localMatrix: local_matrix
+                    ...transform,
+                    translation, rotation, scale,
                 },
-                ...entity
             });
         }
        
+        //UPDATE LOCAL MATRIX IMMUTABLY
+        {
+            const entity = unwrap_get_native(key, nativemap)
+            const { transform } = entity;
+            const { translation, rotation, scale } = transform;
+
+
+            const local_matrix = fromRotationTranslationScale(rotation, translation, scale);
+
+            nativemap.set(key, {
+                ...entity,
+                transform: {
+                    ...transform,
+                    localMatrix: local_matrix
+                },
+            });
+        }
         //UPDATE WORLD TRANSFORMS IMMUTABLY
         {
             const entity = unwrap_get_native(key, nativemap)
@@ -205,8 +222,8 @@ const nativemap_bench_keys = () => {
             const worldMatrix = multiply_mat4(local_matrix_2, local_matrix_2);
 
             nativemap.set(key, {
+                ...entity,
                 worldMatrix,
-                ...entity
             });
         }
 
@@ -232,12 +249,108 @@ const nativemap_bench_keys = () => {
             const new_material = {alpha: !material.alpha, ...material};
 
             nativemap.set(key, {
+                ...entity,
                 material: new_material,
-                ...entity
             });
         }
 
         
+    }
+}
+
+
+const nativemap_bench_values= () => {
+    //TOGGLE IS_ACTIVE IMMUTABLY
+    for (const [key, entity] of nativemap.entries()) {
+        const { active } = simulate_quick_either(entity);
+        nativemap.set(key, {
+            ...entity,
+            active,
+        });
+    }
+
+    //UPDATE LOCAL POSITIONS IMMUTABLY
+    for (const [key, entity] of nativemap.entries()) {
+        const {transform} = simulate_quick_either(entity);
+        const { translation: t, rotation: r, scale: s } = transform;
+        const translation = {
+            x: t.x + 1,
+            y: t.y + 1,
+            z: t.z + 1,
+        }
+
+        const rotation = {
+            x: r.x + 1,
+            y: r.y + 1,
+            z: r.z + 1,
+            w: r.w + 1,
+        }
+
+        const scale = {
+            x: s.x + 1,
+            y: s.y + 1,
+            z: s.z + 1,
+        }
+
+
+        nativemap.set(key, {
+            ...entity,
+            transform: {
+                ...transform,
+                translation, rotation, scale
+            },
+        });
+    }
+
+    //UPDATE LOCAL MATRIX IMMUTABLY
+    for (const [key, entity] of nativemap.entries()) {
+        const { transform } = simulate_quick_either(entity);
+        const { translation, rotation, scale } = transform;
+        const local_matrix = fromRotationTranslationScale(translation, rotation, scale);
+
+        nativemap.set(key, {
+            transform: {
+                ...transform,
+                localMatrix: local_matrix
+            },
+            ...entity
+        });
+    }
+       
+    //UPDATE WORLD TRANSFORMS IMMUTABLY
+    for (const [key, entity] of nativemap.entries()) {
+        const { transform } = simulate_quick_either(entity);
+        const { localMatrix } = transform;
+
+        const worldMatrix = multiply_mat4(localMatrix, localMatrix);
+        nativemap.set(key, {
+            worldMatrix,
+            ...entity
+        });
+    }
+
+    //UPDATE PHYSICS MUTABLY
+    for (const [key, entity] of nativemap.entries()) {
+        const { velocity, collider} = simulate_quick_either(entity);
+        velocity.x *= 1;
+        velocity.y *= 1;
+        velocity.z *= 1;
+
+        collider.center.x -= 1;
+        collider.center.y -= 1;
+        collider.center.z -= 1;
+    }
+        //Update material partially, immutably
+
+    for (const [key, entity] of nativemap.entries()) {
+        const { material } = simulate_quick_either(entity);
+
+        const new_material = { alpha: !material.alpha, ...material };
+
+        nativemap.set(key, {
+            ...entity,
+            material: new_material,
+        });
     }
 }
 
@@ -246,7 +359,14 @@ const suite = new Benchmark.Suite();
 suite
     .add("nativemap keys", nativemap_bench_keys)
     .add("slotmap keys", slotmap_bench_keys)
+    .add("nativemap values", nativemap_bench_values)
     .add("slotmap values", slotmap_bench_values)
+    .on("start", () => {
+        if(nativemap.size !== slotmap.length()) {
+            throw new Error("internal error - different amount of items!");
+        }
+        console.log(`running benchmark for ${nativemap.size} entries`);
+    })
     .on('cycle', function(event) {
       console.log(String(event.target));
     })

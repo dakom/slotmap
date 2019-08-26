@@ -18,6 +18,9 @@ export const COLLIDER = 8;
 
 const N_ENTITIES = 100;
 
+export const simulate_quick_either = <V>(value:V):V =>
+    E.getOrElse(() => null) (E.right(value));
+
 //Prep mock data
 export const prep_mock_data = ():[MySlotMap, MyNativeMap] => {
     let slotmap:MySlotMap;

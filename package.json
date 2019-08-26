@@ -1,6 +1,6 @@
 {
   "name": "slotmap",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "slotmap",
   "main": "dist/lib.cjs.js",
   "module": "dist/lib.esm.js",
