@@ -10,6 +10,8 @@ Inspired by [beach_map](https://github.com/leudz/beach_map) and [EnTT](https://g
 
 (but doesn't go near as far as either of those in terms of features or performance)
 
+**UPDATE: this experiment is taken to the next step in [partzuf](https://github.com/dakom/partzuf)**
+
 # Results
 
 **Success!**
